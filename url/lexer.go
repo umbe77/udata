@@ -16,6 +16,10 @@ const (
 	IDENT
 	//Misc caracters
 	COMMA
+	ASTERISK
+	//Sort Directions
+	ASC
+	DESC
 )
 
 func isWhiteSpace(ch rune) bool {
@@ -98,6 +102,8 @@ func (l *Lexer) Scan() (tok Token, lit string) {
 		return EOF, ""
 	case ',':
 		return COMMA, string(ch)
+	case '*':
+		return ASTERISK, string(ch)
 	}
 
 	return ILLEGAL, string(ch)
