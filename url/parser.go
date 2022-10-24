@@ -76,7 +76,7 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 		sortField := &SortField{Field: lit, Direction: "ASC"}
 		sorts = append(sorts, sortField)
 		if tok, lit = p.scanIgnoreWhitespace(l); tok != COMMA && (lit == "desc" || lit == "asc") {
-			sortField.Direction = lit
+			sortField.Direction = strings.ToUpper(lit)
 		} else {
 			p.unscan()
 		}
@@ -90,6 +90,55 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 	return sorts, nil
 }
 
+func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
+	tok, lit := p.scanIgnoreWhitespace(l)
+	if tok != IDENT {
+		return Expression{}, fmt.Errorf("found %q, expected field", lit)
+	}
+	return Expression{
+		Op:    Operand,
+		Value: lit,
+	}, nil
+}
+
+func (p *Parser) parseBinaryOp(l *Lexer) (Expression, error) {
+	lhs, err := p.parsePrimaryExpr(l)
+	if err != nil {
+		return Expression{}, err
+	}
+	tok, lit := p.scanIgnoreWhitespace(l)
+	if tok == OPER {
+		rhs, err := p.parseBinaryOp(l)
+		if err != nil {
+			return Expression{}, err
+		}
+		var op Operation
+		switch lit {
+		case "eq", "ne", "gt", "gte", "lt", "lte":
+			op = Comparison
+		case "and", "or", "not":
+			op = Boolean
+		}
+
+		return Expression{
+			Op:    op,
+			Args:  []Expression{lhs, rhs},
+			Value: lit,
+		}, nil
+	}
+	return lhs, nil
+}
+
+func (p *Parser) parseFilter(l *Lexer) (FilterStatement, error) {
+	var stmt = FilterStatement{}
+	expr, err := p.parseBinaryOp(l)
+	if err != nil {
+		return stmt, nil
+	}
+	stmt.Expressions = append(stmt.Expressions, expr)
+	return stmt, nil
+}
+
 func (p *Parser) Parse() (*StatementTree, error) {
 	var err error
 	odataParts, err := neturl.ParseQuery(p.odataUrl)
@@ -98,7 +147,6 @@ func (p *Parser) Parse() (*StatementTree, error) {
 	}
 
 	selectPart := odataParts.Get("$select")
-	fmt.Printf("%q\n", selectPart)
 	if selectPart == "" {
 		selectPart = "*"
 	}
@@ -109,11 +157,21 @@ func (p *Parser) Parse() (*StatementTree, error) {
 		return nil, err
 	}
 
+	filterPart := odataParts.Get("$filter")
+	if filterPart != "" {
+		stmt.Filter, err = p.parseFilter(NewLexer(getReader(filterPart)))
+		p.reset()
+		if err != nil {
+			return nil, err
+		}
+	}
 	sortPart := odataParts.Get("$orderby")
-	stmt.Sort, err = p.parseSort(NewLexer(getReader(sortPart)))
-	p.reset()
-	if err != nil {
-		return nil, err
+	if sortPart != "" {
+		stmt.Sort, err = p.parseSort(NewLexer(getReader(sortPart)))
+		p.reset()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return stmt, nil

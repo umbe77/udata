@@ -17,9 +17,11 @@ const (
 	//Misc caracters
 	COMMA
 	ASTERISK
-	//Sort Directions
-	ASC
-	DESC
+	//Operators
+	OPER
+	//Parentesis
+	OPENBRACKET
+	CLOSEBRACKET
 )
 
 func isWhiteSpace(ch rune) bool {
@@ -27,7 +29,7 @@ func isWhiteSpace(ch rune) bool {
 }
 
 func isIdent(ch rune) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_'
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' || ch == '\''
 }
 
 type Lexer struct {
@@ -68,7 +70,7 @@ func (l *Lexer) scanWhitespace() (tok Token, lit string) {
 	return SPACE, buf.String()
 }
 
-func (l *Lexer) scanIdent() (tok Token, lit string) {
+func (l *Lexer) scanIdent() (Token, string) {
 	var buf bytes.Buffer
 	buf.WriteRune(l.read())
 
@@ -83,7 +85,20 @@ func (l *Lexer) scanIdent() (tok Token, lit string) {
 		}
 	}
 
-	return IDENT, buf.String()
+	lit := buf.String()
+	if lit == "eq" ||
+		lit == "ne" ||
+		lit == "gt" ||
+		lit == "gte" ||
+		lit == "lt" ||
+		lit == "lte" ||
+		lit == "and" ||
+		lit == "or" ||
+		lit == "not" {
+		return OPER, lit
+	}
+
+	return IDENT, lit
 }
 
 func (l *Lexer) Scan() (tok Token, lit string) {
@@ -104,6 +119,10 @@ func (l *Lexer) Scan() (tok Token, lit string) {
 		return COMMA, string(ch)
 	case '*':
 		return ASTERISK, string(ch)
+	case '(':
+		return OPENBRACKET, string(ch)
+	case ')':
+		return CLOSEBRACKET, string(ch)
 	}
 
 	return ILLEGAL, string(ch)
