@@ -12,7 +12,7 @@ type SortField struct {
 type Operation int
 
 const (
-	Operand Operation = iota
+	Literal Operation = iota
 	Comparison
 	Boolean
 )

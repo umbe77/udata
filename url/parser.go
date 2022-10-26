@@ -96,7 +96,7 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 		return Expression{}, fmt.Errorf("found %q, expected field", lit)
 	}
 	return Expression{
-		Op:    Operand,
+		Op:    Literal,
 		Value: lit,
 	}, nil
 }
