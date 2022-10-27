@@ -13,7 +13,7 @@ type Operation int
 
 const (
 	Literal Operation = iota
-	Comparison
+	Compare
 	Boolean
 )
 

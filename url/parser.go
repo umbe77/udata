@@ -75,6 +75,7 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 		}
 		sortField := &SortField{Field: lit, Direction: "ASC"}
 		sorts = append(sorts, sortField)
+		//TODO: Check for sorting direction should ignore case
 		if tok, lit = p.scanIgnoreWhitespace(l); tok != COMMA && (lit == "desc" || lit == "asc") {
 			sortField.Direction = strings.ToUpper(lit)
 		} else {
@@ -95,10 +96,34 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 	if tok != IDENT {
 		return Expression{}, fmt.Errorf("found %q, expected field", lit)
 	}
-	return Expression{
+
+	result := Expression{
+		Op:   Compare,
+		Args: make([]Expression, 2),
+	}
+
+	result.Args[0] = Expression{
 		Op:    Literal,
 		Value: lit,
-	}, nil
+	}
+
+	tok, lit = p.scanIgnoreWhitespace(l)
+	if tok == OPER_COMPARE {
+		result.Value = lit
+		tok, lit = p.scanIgnoreWhitespace(l)
+		if tok != IDENT {
+			return Expression{}, fmt.Errorf("found %q, expected field", lit)
+		}
+		result.Args[1] = Expression{
+			Op:    Literal,
+			Value: lit,
+		}
+		return result, nil
+	}
+
+	p.unscan()
+	return Expression{}, fmt.Errorf("Syntax Error %q", lit)
+
 }
 
 func (p *Parser) parseBinaryOp(l *Lexer) (Expression, error) {
@@ -107,7 +132,7 @@ func (p *Parser) parseBinaryOp(l *Lexer) (Expression, error) {
 		return Expression{}, err
 	}
 	tok, lit := p.scanIgnoreWhitespace(l)
-	if tok == OPER {
+	if tok == OPER_BOOLEAN {
 		rhs, err := p.parseBinaryOp(l)
 		if err != nil {
 			return Expression{}, err
@@ -115,7 +140,7 @@ func (p *Parser) parseBinaryOp(l *Lexer) (Expression, error) {
 		var op Operation
 		switch lit {
 		case "eq", "ne", "gt", "gte", "lt", "lte":
-			op = Comparison
+			op = Compare
 		case "and", "or", "not":
 			op = Boolean
 		}

@@ -18,7 +18,8 @@ const (
 	COMMA
 	ASTERISK
 	//Operators
-	OPER
+	OPER_COMPARE
+	OPER_BOOLEAN
 	//Parentesis
 	OPENBRACKET
 	CLOSEBRACKET
@@ -91,11 +92,14 @@ func (l *Lexer) scanIdent() (Token, string) {
 		lit == "gt" ||
 		lit == "gte" ||
 		lit == "lt" ||
-		lit == "lte" ||
-		lit == "and" ||
+		lit == "lte" {
+		return OPER_COMPARE, lit
+	}
+
+	if lit == "and" ||
 		lit == "or" ||
 		lit == "not" {
-		return OPER, lit
+		return OPER_BOOLEAN, lit
 	}
 
 	return IDENT, lit
