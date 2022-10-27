@@ -9,6 +9,7 @@ import (
 
 type Parser struct {
 	odataUrl string
+	entity   string
 	buf      struct {
 		tok Token
 		lit string
@@ -20,8 +21,8 @@ func getReader(input string) *bufio.Reader {
 	return bufio.NewReader(strings.NewReader(input))
 }
 
-func NewParser(odataUrl string) *Parser {
-	return &Parser{odataUrl: odataUrl}
+func NewParser(entity string, odataUrl string) *Parser {
+	return &Parser{entity: entity, odataUrl: odataUrl}
 }
 
 func (p *Parser) scan(l *Lexer) (tok Token, lit string) {
@@ -90,6 +91,30 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 	return sorts, nil
 }
 
+func (p *Parser) parseFunction(functionName string, l *Lexer) (Expression, error) {
+	fc := Expression{
+		Op:    FUNCTION,
+		Args:  make([]Expression, 0),
+		Value: functionName,
+	}
+
+	for {
+		tok, _ := p.scanIgnoreWhitespace(l)
+		if tok == CLOSEBRACKET {
+			break
+		}
+		if tok != COMMA {
+			p.unscan()
+			fcArgs, err := p.parsePrimaryExpr(l)
+			if err != nil {
+				return Expression{}, err
+			}
+			fc.Args = append(fc.Args, fcArgs)
+		}
+	}
+
+	return fc, nil
+}
 func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 	tok, lit := p.scanIgnoreWhitespace(l)
 	if tok == OPENBRACKET {
@@ -99,7 +124,7 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 		}
 
 		return Expression{
-			Op:    Group,
+			Op:    GROUP,
 			Args:  []Expression{expr},
 			Value: "()",
 		}, nil
@@ -109,15 +134,36 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 		return Expression{}, fmt.Errorf("found %q, expected field", lit)
 	}
 
-	result := Expression{
-		Op:   Compare,
-		Args: make([]Expression, 2),
-	}
-
-	result.Args[0] = Expression{
-		Op:    Literal,
+	lhs := Expression{
+		Op:    LITERAL,
 		Value: lit,
 	}
+
+	tmpFunctionName := lit
+	tok, _ = p.scanIgnoreWhitespace(l)
+	switch tok {
+	case OPENBRACKET:
+		var err error
+		lhs, err = p.parseFunction(tmpFunctionName, l)
+		if err != nil {
+			return Expression{}, err
+		}
+		return lhs, nil
+	case COMMA:
+		return lhs, nil
+	case CLOSEBRACKET:
+		p.unscan()
+		return lhs, nil
+	default:
+		p.unscan()
+
+	}
+
+	result := Expression{
+		Op:   COMPARE,
+		Args: make([]Expression, 2),
+	}
+	result.Args[0] = lhs
 
 	tok, lit = p.scanIgnoreWhitespace(l)
 	if tok == OPER_COMPARE {
@@ -127,7 +173,7 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 			return Expression{}, fmt.Errorf("found %q, expected field", lit)
 		}
 		result.Args[1] = Expression{
-			Op:    Literal,
+			Op:    LITERAL,
 			Value: lit,
 		}
 		tok, lit = p.scanIgnoreWhitespace(l)
@@ -156,9 +202,9 @@ func (p *Parser) parseBinaryOp(l *Lexer) (Expression, error) {
 		var op Operation
 		switch lit {
 		case "eq", "ne", "gt", "gte", "lt", "lte":
-			op = Compare
+			op = COMPARE
 		case "and", "or", "not":
-			op = Boolean
+			op = BOOLEAN
 		}
 
 		return Expression{
@@ -187,11 +233,13 @@ func (p *Parser) Parse() (*StatementTree, error) {
 		return nil, fmt.Errorf("Error Parsing QueryString %s", p.odataUrl)
 	}
 
+	stmt := &StatementTree{}
+	stmt.From = p.entity
+
 	selectPart := odataParts.Get("$select")
 	if selectPart == "" {
 		selectPart = "*"
 	}
-	stmt := &StatementTree{}
 	stmt.Select, err = p.parseSelect(NewLexer(getReader(selectPart)))
 	p.reset()
 	if err != nil {

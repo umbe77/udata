@@ -12,10 +12,11 @@ type SortField struct {
 type Operation int
 
 const (
-	Literal Operation = iota
-	Compare
-	Boolean
-	Group
+	LITERAL Operation = iota
+	COMPARE
+	BOOLEAN
+	GROUP
+	FUNCTION
 )
 
 type Expression struct {
@@ -32,4 +33,5 @@ type StatementTree struct {
 	Select *SelectStatement
 	Sort   []*SortField
 	Filter FilterStatement
+	From   string
 }
