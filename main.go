@@ -10,7 +10,7 @@ import (
 func main() {
 	//odataUrl := "$select=field1,field2 , field3&$filter=Name eq 'Pippo'&$orderby=fild1, fild2 desc, field3 asc"
 	//odataUrl := "$filter=Name eq 'Pippo' and LastName ne 'Pluto' or Age gte 20"
-	odataUrl := "$filter=Name eq 'Pippo' or LastName ne 'Pluto' and Age gte 20"
+	odataUrl := "$filter=(Name eq 'Pippo' or (LastName ne 'Pluto' and Age gte 20 and (a eq 8 or b gt 4)))"
 	parser := url.NewParser(odataUrl)
 	ast, err := parser.Parse()
 	if err != nil {

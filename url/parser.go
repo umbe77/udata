@@ -82,7 +82,6 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 			p.unscan()
 		}
 		if tok, _ = p.scanIgnoreWhitespace(l); tok != COMMA {
-			//TODO: Capire se rilasciare un errore sintattico
 			p.unscan()
 			break
 		}
@@ -93,6 +92,19 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 
 func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 	tok, lit := p.scanIgnoreWhitespace(l)
+	if tok == OPENBRACKET {
+		expr, err := p.parseBinaryOp(l)
+		if err != nil {
+			return Expression{}, err
+		}
+
+		return Expression{
+			Op:    Group,
+			Args:  []Expression{expr},
+			Value: "()",
+		}, nil
+
+	}
 	if tok != IDENT {
 		return Expression{}, fmt.Errorf("found %q, expected field", lit)
 	}
@@ -117,6 +129,10 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 		result.Args[1] = Expression{
 			Op:    Literal,
 			Value: lit,
+		}
+		tok, lit = p.scanIgnoreWhitespace(l)
+		if tok != CLOSEBRACKET {
+			p.unscan()
 		}
 		return result, nil
 	}

@@ -15,6 +15,7 @@ const (
 	Literal Operation = iota
 	Compare
 	Boolean
+	Group
 )
 
 type Expression struct {
