@@ -76,6 +76,7 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 		}
 		sortField := &SortField{Field: lit, Direction: "ASC"}
 		sorts = append(sorts, sortField)
+		//TODO: Check for sorting direction should ignore case
 		if tok, lit = p.scanIgnoreWhitespace(l); tok != COMMA && (lit == "DESC" || lit == "ASC" || lit == "desc" || lit == "asc") {
 			sortField.Direction = strings.ToUpper(lit)
 		} else {
