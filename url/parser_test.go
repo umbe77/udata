@@ -93,6 +93,7 @@ func TestParseSort(t *testing.T) {
 	}
 }
 
+// TODO: Expand Unit test for all part of AST
 func TestParseFilterCompare(t *testing.T) {
 	tbl := "sample"
 	compareOperators := []string{"eq", "ne", "gt", "gte", "lt", "lte"}
