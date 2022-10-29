@@ -1,6 +1,9 @@
 package url
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestParseFrom(t *testing.T) {
 	tbl := "sample"
@@ -87,5 +90,32 @@ func TestParseSort(t *testing.T) {
 	}
 	if stmTree.Sort[4].Field != "Field5" || stmTree.Sort[4].Direction != "ASC" {
 		t.Errorf("Expected 'Field5 ASC', got: '%s %s'", stmTree.Sort[4].Field, stmTree.Sort[4].Direction)
+	}
+}
+
+func TestParseFilterCompare(t *testing.T) {
+	tbl := "sample"
+	compareOperators := []string{"eq", "ne", "gt", "gte", "lt", "lte"}
+	for _, compareOperator := range compareOperators {
+
+		odataUrl := fmt.Sprintf("$filter=a %s 'Pippo'", compareOperator)
+		p := NewParser(tbl, odataUrl)
+
+		stmTree, err := p.Parse()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if len(stmTree.Filter.Expressions) != 1 {
+			t.Errorf("Expected only 1 AST")
+		}
+		ast := stmTree.Filter.Expressions[0]
+		if ast.Op != COMPARE || ast.Value != compareOperator {
+			t.Errorf("Expected Op: %d 'eq', got: Op -> %d %s", COMPARE, ast.Op, ast.Value)
+		}
+		if ast.Args[0].Value != "a" || ast.Args[0].Op != LITERAL || ast.Args[1].Value != "'Pippo'" || ast.Args[1].Op != LITERAL {
+
+			t.Error("Wrong Arguments")
+		}
 	}
 }
