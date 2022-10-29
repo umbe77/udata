@@ -74,6 +74,9 @@ func (p *Parser) parseSort(l *Lexer) ([]*SortField, error) {
 
 	for {
 		tok, lit := p.scanIgnoreWhitespace(l)
+		if tok == EOF {
+			break
+		}
 		if tok != IDENT {
 			return nil, fmt.Errorf("found %q, expected field", lit)
 		}
