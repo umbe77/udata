@@ -193,6 +193,7 @@ func (p *Parser) parsePrimaryExpr(l *Lexer) (Expression, error) {
 
 }
 
+// TODO: Add Not and in operators
 func (p *Parser) parseBinaryOp(l *Lexer) (Expression, error) {
 	lhs, err := p.parsePrimaryExpr(l)
 	if err != nil {
