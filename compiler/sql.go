@@ -24,23 +24,12 @@ var booleanOperatorMap = map[string]string{
 	"NOT": "NOT",
 }
 
-func (c Sql) Compile(stmTree *url.StatementTree) (string, error) {
-	selectStmt := fmt.Sprintf("SELECT %s", strings.Join(stmTree.Select.Fields, ", "))
+func clearSqlInjection(value string) string {
+	if strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'") {
 
-	orderbyFields := make([]string, len(stmTree.Sort))
-	for i, sortField := range stmTree.Sort {
-		orderbyFields[i] = fmt.Sprintf("%s %s", sortField.Field, sortField.Direction)
+		return fmt.Sprintf("'%s'", strings.ReplaceAll(strings.Trim(value, "'"), "'", "''"))
 	}
-	orderbyStmt := fmt.Sprintf("GROUP BY %s", strings.Join(orderbyFields, ", "))
-
-	whereStr, err := c.CompileExpression(stmTree.Filter.Expressions[0])
-	if err != nil {
-		return "", nil
-	}
-	whereStmt := fmt.Sprintf("WHERE %s", whereStr)
-
-	return fmt.Sprintf("%s\n%s\n%s", selectStmt, whereStmt, orderbyStmt), nil
-
+	return value
 }
 
 func (c Sql) formatBinaryOp(lhs, rhs url.Expression, op string) (string, error) {
@@ -68,19 +57,38 @@ func (c Sql) formatKnownFunctions(functionName string, arguments []url.Expressio
 		if err != nil {
 			return "", err
 		}
-		result = fmt.Sprintf("%s LIKE '%%%s%%'", lhs, rhs)
+		result = fmt.Sprintf("%s LIKE '%%%s%%'", lhs, strings.Trim(rhs, "'"))
 		break
 	default:
 		return "", fmt.Errorf("%s function, not valid", functionName)
 	}
 	return result, nil
 }
+
+func (c Sql) Compile(stmTree *url.StatementTree) (string, error) {
+	selectStmt := fmt.Sprintf("SELECT %s", strings.Join(stmTree.Select.Fields, ", "))
+
+	orderbyFields := make([]string, len(stmTree.Sort))
+	for i, sortField := range stmTree.Sort {
+		orderbyFields[i] = fmt.Sprintf("%s %s", sortField.Field, sortField.Direction)
+	}
+	orderbyStmt := fmt.Sprintf("GROUP BY %s", strings.Join(orderbyFields, ", "))
+
+	whereStr, err := c.CompileExpression(stmTree.Filter.Expressions[0])
+	if err != nil {
+		return "", nil
+	}
+	whereStmt := fmt.Sprintf("WHERE %s", whereStr)
+
+	return fmt.Sprintf("%s\n%s\n%s", selectStmt, whereStmt, orderbyStmt), nil
+
+}
 func (c Sql) CompileExpression(expr url.Expression) (string, error) {
 	var result string
 	var err error
 	switch expr.Op {
 	case url.LITERAL:
-		result = fmt.Sprintf("%s", expr.Value)
+		result = fmt.Sprintf("%s", clearSqlInjection(expr.Value))
 		break
 	case url.COMPARE:
 		result, err = c.formatBinaryOp(expr.Args[0], expr.Args[1], compareOperatorMap[expr.Value])

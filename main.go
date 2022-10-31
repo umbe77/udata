@@ -12,7 +12,7 @@ func main() {
 	//odataUrl := "$filter=Name eq 'Pippo' and LastName ne 'Pluto' or Age gte 20"
 	//odataUrl := "$filter=(Name eq 'Pippo' or (LastName ne 'Pluto' and Age gte 20 and (a eq 8 or b gt 4)))"
 	//odataUrl := "$filter=contains(Name, 'Pippo') or Name eq 'Pluto'"
-	odataUrl := "$select=field1,field2 , field3&$orderby=fild1, fild2 DESC, field3 asc&$filter=(Name eq 'Pippo' and contains(Role, 'test') or (LastName ne 'Pluto' and Age gte 20 and (a eq 8 or b gt 4)))"
+	odataUrl := "$select=field1,field2 , field3&$orderby=fild1, fild2 DESC, field3 asc&$filter=(Name eq 'Pip'po' and contains(Role, 'test') or (LastName ne 'Pluto' and Age gte 20 and (a eq 8 or b gt 4)))"
 
 	parser := url.NewParser("sample_table", odataUrl)
 	ast, err := parser.Parse()
