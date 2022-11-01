@@ -232,6 +232,7 @@ func (p *Parser) parseFilter(l *Lexer) (FilterStatement, error) {
 	return stmt, nil
 }
 
+// TODO: Implement $top and $expand
 func (p *Parser) Parse() (*StatementTree, error) {
 	var err error
 	odataParts, err := neturl.ParseQuery(p.odataUrl)
